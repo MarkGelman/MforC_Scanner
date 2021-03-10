@@ -20,15 +20,19 @@ namespace MforC_Scanner
         int count = 0;
         string folderToSave = "צוהר";
         string kodDocument;
+        string dateDocument;
         string directory;
         string fileName;
+        DataForSave dataSave ;
         List<string>  images =  new List<string>();
-        Dictionary<string, Dictionary<string, DataForSave>> dataForSaveById_Kod = new Dictionary<string, Dictionary<string, DataForSave>>();
-        Dictionary<string,  DataForSave> dataForSaveByDate = new Dictionary<string, DataForSave>();
-        Dictionary<string, DataForSave> dataForSaveByKod = new Dictionary<string, DataForSave>();
-        Dictionary<string, DataForSave> dataForSaveByFirst_Name = new Dictionary<string, DataForSave>();
-        Dictionary<string, DataForSave> dataForSaveByLast_Name = new Dictionary<string, DataForSave> ();
-        Dictionary<string, DataForSave> dataForSaveById = new Dictionary<string, DataForSave>();
+        List<DataForSave> dataSaveList = new List<DataForSave>();
+        Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, List<DataForSave>>>>> dataForSaveById_Kod = new Dictionary<string, Dictionary<string, Dictionary<string, Dictionary<string, List<DataForSave>>>>>();
+        Dictionary<string, List<DataForSave>> dataForSaveById_Kod_Date = new Dictionary<string, List<DataForSave>>();
+        Dictionary<string, List<DataForSave>> dataForSaveByDate = new Dictionary<string, List<DataForSave>>();
+        Dictionary<string, List<DataForSave>> dataForSaveByKod = new Dictionary<string, List<DataForSave>>();
+        Dictionary<string, List<DataForSave>> dataForSaveByFirst_Name = new Dictionary<string, List<DataForSave>>();
+        Dictionary<string, List<DataForSave>> dataForSaveByLast_Name = new Dictionary<string, List<DataForSave>> ();
+        Dictionary<string, List<DataForSave>> dataForSaveById = new Dictionary<string, List<DataForSave>>();
 
         string image;
         public frmToPickCloud()
@@ -147,8 +151,8 @@ namespace MforC_Scanner
 
         private void btnLoadToDictionary_Click(object sender, EventArgs e)
         {
-
-            DataForSave dataSave = new DataForSave
+           
+           dataSave = new DataForSave
             {
 
                 Id = txtIdStudent.Text.ToString(),
@@ -158,73 +162,68 @@ namespace MforC_Scanner
                 KodDocument = cmbTypeDocument.Text.ToString(),
                 Image = images[count]
             };
-            dataForSaveByKod.Add(dataSave.KodDocument, dataSave);
-            dataForSaveById.Add(dataSave.Id, dataSave);
-            dataForSaveByFirst_Name.Add(dataSave.First_Name, dataSave);
-            dataForSaveByLast_Name.Add(dataSave.Last_Name, dataSave);
-            dataForSaveByDate.Add(dataSave.Date, dataSave);
-            dataForSaveById_Kod.Add(dataSave.Id, dataForSaveByKod);
+            dataSaveList.Add(dataSave);
         }
        
         private void btnToPDF_Click(object sender, EventArgs e)
         {
-            PdfDocument document = new PdfDocument();
-            //document.Info.Title = "Created using PDFsharp";
-            
-            foreach (KeyValuePair<string,Dictionary<string, DataForSave>> id in dataForSaveById_Kod)
+                dataForSaveByKod.Add(dataSave.KodDocument, dataSaveList);
+                dataForSaveById.Add(dataSave.Id, dataSaveList);
+                dataForSaveByFirst_Name.Add(dataSave.First_Name, dataSaveList);
+                dataForSaveByLast_Name.Add(dataSave.Last_Name, dataSaveList);
+                dataForSaveByDate.Add(dataSave.Date, dataSaveList);
+              
+                
+           
+           foreach (KeyValuePair<string, List<DataForSave>> i in dataForSaveById)
             {
+                List<DataForSave> convertToPDf = new List<DataForSave>();
+                PdfDocument document = new PdfDocument();
+                
                
-                    PdfPage page = document.AddPage();
-                    XGraphics gfx = XGraphics.FromPdfPage(page);
-
-                    foreach (KeyValuePair<string, DataForSave> item in dataForSaveByKod)
-                    {
-                        System.Drawing.Image img = System.Drawing.Image.FromFile(item.Value.Image);
-                        page.Width = img.Width/4;
-                        page.Height = img.Height/4;
-                        DrawImage(gfx, item.Value.Image, 0, 0, (int)page.Width, (int)page.Height);
-                        kodDocument = item.Key;
-                    }
-                   
-                    /* 
-                     * PdfPage page = document.AddPage();
-                     int StartX = 0 - (int)page.Width / 2;
-                     int StartY = 0 - (int)page.Height / 2;
-                     XGraphics gfx = XGraphics.FromPdfPage(page);
-
-                     foreach (KeyValuePair<string,DataForSave> item in dataForSaveByKod)
-                     {
-                         DrawImage(gfx, item.Value.Image, StartX, StartY, (int)page.Width * 2, (int)page.Height * 2);
-                         StartX += (int)page.Width / 2;
-                         StartY += (int)page.Height / 2;
-                         kodDocument = item.Key;
-                     }
-                    */
-                foreach (KeyValuePair<string,DataForSave> item in dataForSaveById)
+                foreach (KeyValuePair<string, List<DataForSave>> k in dataForSaveByKod)
                 {
-                    if (item.Key == id.Key)
+                   convertToPDf = k.Value.Where(_ => _.Id == i.Key).ToList();
+                   
+                    foreach (KeyValuePair<string, List<DataForSave>> d in dataForSaveByDate)
+                    {
+                        convertToPDf = convertToPDf.Where(o => o.Date == d.Key).ToList();
+                        int sy = 0;
+                        foreach (DataForSave image in convertToPDf)
+                        {
+                            PdfPage page = document.AddPage();
+                            XGraphics gfx = XGraphics.FromPdfPage(page);
+                            System.Drawing.Image img = System.Drawing.Image.FromFile(image.Image);
+                            page.Width = img.Width / 4;
+                            page.Height = img.Height / 4;
+                            DrawImage(gfx, image.Image, 0, 0, (int)page.Width, (int)page.Height);
+                           // kodDocument = item.Key;
+                        }
                         if (document.PageCount > 0)
                         {
-                            directory = $"C:\\{folderToSave}\\{item.Value.Last_Name}_{item.Value.First_Name}_{item.Value.Id}";
-                            fileName = $"\\{item.Value.Id}-{kodDocument}-{item.Value.Date}.pdf";
+                            directory = $"C:\\{folderToSave}\\{convertToPDf[0].Last_Name}_{convertToPDf[0].First_Name}_{convertToPDf[0].Id}";
+                            fileName = $"\\{convertToPDf[0].Id}-{convertToPDf[0].KodDocument}-{convertToPDf[0].Date}.pdf";
                             if (!(Directory.Exists(directory)))
                             {
                                 Directory.CreateDirectory(directory);
                             }
-                            string path = directory+ fileName;
+                            string path = directory + fileName;
                             FileInfo fi = new FileInfo(path);
                             if (!(fi.Exists))
                             {
                                 using (FileStream fs = fi.Create())
                                 {
-                                   
+
                                 }
                             }
-                            document.Save(directory + fileName);       
+                            document.Save(directory + fileName);
                         }
-                    
+                    }   
                 }
             }
+                
+                    
+                    
             void DrawImage(XGraphics gfx, string jpegSamplePath, int x, int y, int width, int height)
             {
                 XImage image = XImage.FromFile(jpegSamplePath);
